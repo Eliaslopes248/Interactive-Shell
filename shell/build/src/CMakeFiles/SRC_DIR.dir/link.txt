@@ -1,2 +1,0 @@
-/usr/bin/ar qc libSRC_DIR.a CMakeFiles/SRC_DIR.dir/shell.cpp.o
-/usr/bin/ranlib libSRC_DIR.a

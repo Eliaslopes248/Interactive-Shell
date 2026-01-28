@@ -1,9 +1,0 @@
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/CMakeFiles/shell.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/CMakeFiles/edit_cache.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/CMakeFiles/rebuild_cache.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/include/CMakeFiles/INCLUDE_DIR.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/include/CMakeFiles/edit_cache.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/include/CMakeFiles/rebuild_cache.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/src/CMakeFiles/SRC_DIR.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/src/CMakeFiles/edit_cache.dir
-/Users/eliasmini/all-projects/Elias_HW_Tests/Main/TESTS/test3/shell/build/src/CMakeFiles/rebuild_cache.dir
