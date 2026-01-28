@@ -68,16 +68,19 @@ int             size;
 
 // constructor 
 command_tree();
-command_tree(command_node* root=NULL);
+command_tree(command_node* root);
 
 // tree operations
-void    printTree();                        // prints tree content in order traversal
-void    insert_node(command_node* cmd);     // adds a command node to the tree
-int     get_size();                         // returns size of tree
-int     get_size(command_node* root);       // count size of given tree
-void    inOrderTrav(command_node* root);    // implements in order traversal
-void    clearTree();                        // frees node memory
-void    make_tree(std::vector<std::string> commands);      // builds tree
+void            printTree();                                        // prints tree content in order traversal
+void            insert_node(command_node* cmd);                     // adds a command node to the tree
+int             get_size();                                         // returns size of tree
+int             get_size(command_node* root);                       // count size of given tree
+void            inOrderTrav(command_node* root);                    // implements in order traversal
+void            clearTree();                                        // frees node memory
+void            make_tree(std::vector<std::string> commands);       // builds tree by making nddes and calling a build tree method
+command_node*   to_balanced_tree(const std::vector<command_node*>& nodes, int lower, int upper); // builds balanced tree of nodes
+int             execute_commands();                                 // execute all commands in the tree
+bool            is_built_in(std::string exe);                       // checks if a command is in the systems path
 
 private:
 

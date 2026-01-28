@@ -12,6 +12,7 @@
 #include <pwd.h>
 #include <vector>
 #include <set>
+#include <stdio.h>
 // testing method definitions
 command_node* get_test_cmd_nodes();
 // --------------------------------------------------------------------
@@ -197,15 +198,9 @@ void SH::get_input(){
             std::vector<std::string> tokens = tokenize(cmd, ' ');
             // turn tokens into command groups
             std::vector<std::string> cmd_strings = group_tokens(tokens);
-
-            // create nodes
-
-            
-            /**
-                FIXME: testing group method
-            */
-            command_tree* tree;
-            tree->make_tree(cmd_strings);
+            // create command tree
+            command_tree tree;
+            tree.make_tree(cmd_strings);
 
             //exit(0);
         }else{
@@ -283,7 +278,7 @@ int CMD_TREE::get_size(command_node* root)
 
 void CMD_TREE::inOrderTrav(command_node* root)
 {
-    if (root == nullptr) return;
+    if (!root) { return; }
     inOrderTrav(root->left);
     std::cout << '[' << root->data << ']' << ' ';
     inOrderTrav(root->right);
@@ -294,27 +289,96 @@ void CMD_TREE::printTree()
     inOrderTrav(this->root);
 }
 
+/** constructs a balanced tree of nodes */
+command_node* CMD_TREE::to_balanced_tree(
+    const std::vector<command_node*>& nodes, 
+    int lower, 
+    int upper)
+{
+    // checl if out of bounds
+    if (lower > upper) return nullptr;
+    // find mid point of current node range
+    int mid = lower + (upper - lower) / 2;
+
+    if (mid < 0)                return nullptr;
+    if (mid > nodes.size()-1)   return nullptr;
+
+    // set left and right children
+    command_node* n = nodes[mid];
+    // Safety check for null node
+    if (!n) return nullptr;  
+    
+    n->left         = to_balanced_tree(nodes, lower, mid-1);
+    n->right        = to_balanced_tree(nodes, mid+1, upper);
+    
+    return n;
+}
+
+/** turns tokens into nodes and sets the root as a balanced tree */
 void CMD_TREE:: make_tree(std::vector<std::string> commands)
 {
     size_t n = commands.size();
     if (n==0) return;
     // reserve n slots for commands
-    std::vector<command_node*> nodes(n);
-
-    // create nodes
+    std::vector<command_node*> nodes;
+    nodes.reserve(n);
+    // creates nodes
     for (std::string& s : commands)
-    { 
-        std::cout << "[" << s << "] ";
+    {
+        /** creates node ptr */
         command_node* cmd = new command_node;
+        /** set values of node */
         cmd->data = s;
+        cmd->left = nullptr;
+        cmd->right = nullptr;
+        /** add to vector of nodes */
         nodes.push_back(cmd);
     }
 
-    /**
-        FIXME: Implement inserting nodes in tree
-    */
+    int num_nodes = nodes.size();
+    if (num_nodes > 0)
+    {
+        /** create balances tree of nodes */
+        this->root = to_balanced_tree(nodes, 0, num_nodes - 1);
+    }
+
+    /** print tree */
+    printTree();
+    /** DELETE: test is build in  */
+    is_built_in("ls");
 }
 
+/** checks if a command is in users $PATH or not and if not check local for exe */
+bool CMD_TREE::is_built_in(
+    std::string exe)
+{
+    char* path;
+    /** check path for MAC */
+    #ifdef __APPLE__
+        path = std::getenv("PATH");
+    /** check path for LINUX */
+    #elif defined(__linux__) || defined(__unix__)
+        path = std::getenv("Path");
+    /** check path for WINDOWS */
+    #elif defined(_WIN32)
+        path = std::getenv("Path");
+    #else
+        path = std::getenv("PATH");
+    #endif
+
+    /** check path for exe match */
+    char* ptr = path;
+    while(*ptr != '\0'){
+        /** TASK: tokenize $PATH */
+        printf("%c", *ptr);
+        ptr++;
+    }
+
+    /** TASK: see if theres a match */
+
+
+    return false;
+}
 // ------------------ TESTING ---------------------------------
 
 command_node* get_test_cmd_nodes(){
