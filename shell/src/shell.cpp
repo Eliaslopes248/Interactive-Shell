@@ -2,17 +2,27 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <ios>
 #include <iostream>
 #include "../include/shell.h"
 #include <limits.h> 
 #include <ostream>
+#include <fstream>
 #include <string>
 #include <sys/_types/_pid_t.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <vector>
 #include <set>
 #include <stdio.h>
+#include <sys/wait.h>
+
+
+
+
+
 // testing method definitions
 command_node* get_test_cmd_nodes();
 // --------------------------------------------------------------------
@@ -78,7 +88,8 @@ std::string SH::get_user()
     }
 }
 
-void SH::set_cwd(std::string path)
+void SH::set_cwd(
+    std::string path)
 {
     // handle default cwd
     if (path.size() == 0)
@@ -95,11 +106,33 @@ void SH::set_cwd(std::string path)
 }
 
 // ---------------------------------------------------------
-void SH::get_prompt(std::string* prompt)
+
+
+
+inline void SH::welcome() {
+    std::cout <<
+R"(
+ __        __   _                             _____ _     ___    _    ____  
+ \ \      / /__| | ___ ___  _ __ ___   ___   | ____| |   |_ _|  / \  / ___| 
+  \ \ /\ / / _ \ |/ __/ _ \| '_ ` _ \ / _ \  |  _| | |    | |  / _ \ \___ \ 
+   \ V  V /  __/ | (_| (_) | | | | | |  __/  | |___| |___ | | / ___ \ ___) |
+    \_/\_/ \___|_|\___\___/|_| |_| |_|\___|  |_____|_____|___/_/   \_\____/ 
+)" << std::endl;
+}
+
+/** exits shell */
+inline void SH::exit_shell()
+{
+    std::cout << "Exiting Shell :)" << std::endl;
+    exit(EXIT_SUCCESS);
+}
+
+
+inline void SH::get_prompt(
+            std::string* prompt)
 {
     if (!prompt) { return; }
     // make sure values are set
-    if (m_current_directory.length() == 0)  { set_cwd(); }
     if (m_host.length() == 0)               { get_host(); }
     if (m_user.length() == 0)               { get_user(); }
     // make sure shell mode is set
@@ -107,28 +140,29 @@ void SH::get_prompt(std::string* prompt)
     { 
         m_shell_mode = MODE::INTERACTIVE; 
     }
-
-    *prompt =  m_user + '@' + m_host + ":~" + m_current_directory + "$ ";
+    // get cwd
+    set_cwd();
+    /** set prompt w/ ANSI coloring */
+    *prompt = "\e[34m" + m_user + '@' + m_host + "\x1b[0m" + ":~" + m_current_directory + "$ ";
     
 }
 
-void SH::print_user(std::string* prompt)
+inline void SH::print_user(
+            std::string* prompt)
 {
     if (prompt == nullptr) { return; }
-    // print out the prompt
-    std::cout << "--------------------------------------"<< std::endl;
-    std::cout << "ELIAS SHELL"<< std::endl;
-    std::cout << "--------------------------------------"<< std::endl;
     get_prompt(prompt);
     // print out on same line
     std::cout << *prompt;
-
+    return;
 }
 
 void SH::cleanup(){}
 
 //------------------------------------------------------------------
-std::vector<std::string> SH::tokenize(const std::string s, char delimiter)
+std::vector<std::string> SH::tokenize(
+    const std::string s, 
+    char delimiter)
 {
     size_t n = s.size();
     if (n == 0) return {};
@@ -136,7 +170,8 @@ std::vector<std::string> SH::tokenize(const std::string s, char delimiter)
     size_t start = 0, end = 0;
     std::vector<std::string> output;
 
-    while (end < n) {
+    while (end < n) 
+    {
         if (s[end] == '"') {
             end++;
             while (end < n && s[end] != '"') {
@@ -159,14 +194,16 @@ std::vector<std::string> SH::tokenize(const std::string s, char delimiter)
     return output;
 }
 
-std::vector<std::string> SH::group_tokens(const std::vector<std::string>& tokens)
+std::vector<std::string> SH::group_tokens(
+        const std::vector<std::string>& tokens)
 {
     size_t n = tokens.size();
     std::vector<std::string> output;
 
     // operators
     std::set<std::string> operators = {"||", "&&", ";", "|", "&"};
-
+    
+    // group tokens
     for(int i=0; i<n; i++){
         if (operators.find(tokens[i]) != operators.end()){
             output.push_back(tokens[i]);
@@ -186,7 +223,24 @@ std::vector<std::string> SH::group_tokens(const std::vector<std::string>& tokens
     return output;
 }
 
-void SH::get_input(){
+/** executes commands doing in order traversal */
+int SH::execute_command_tree(
+    const command_tree& cmd_tree)
+{
+    /** retrun -1 if tree is empty */
+    if (cmd_tree.get_size() == 0) { return -1; }
+    /** execute nodes in order */
+    try{
+        int result = cmd_tree.execute_commands(); 
+    }catch(...){
+        return -1;
+    }
+    /** return 0 if all pass */
+    return 0;
+}
+
+inline void SH::get_input()
+{
     try{
         // get standard input if in interactive mode
         if (m_shell_mode == MODE::INTERACTIVE)
@@ -196,15 +250,18 @@ void SH::get_input(){
             std::getline(std::cin, cmd);
             // split the shell cmds by spaces
             std::vector<std::string> tokens = tokenize(cmd, ' ');
+            if (!tokens.empty() && (tokens[0] == "exit" || tokens[0] == "Exit")) exit_shell();
             // turn tokens into command groups
             std::vector<std::string> cmd_strings = group_tokens(tokens);
             // create command tree
             command_tree tree;
             tree.make_tree(cmd_strings);
-
-            //exit(0);
+            /** execute commands in tree */
+            execute_command_tree(tree);
+            return;
         }else{
             // execute the scripts in the input file
+            return;
         }
     }catch(...)
     {
@@ -215,6 +272,8 @@ void SH::get_input(){
 
 int SH::run()
 {
+    /** print welcome message */
+    welcome();
     // prompt string used in whole shell
     std::string* prompt = new std::string();
     while (true)
@@ -243,15 +302,13 @@ int SH::run()
 }
 
 // -----------------------------------------------------------
-
-/**
-    implementation for command tree data structure
-*/
+/** TREE: implementation for command tree data structure */
 
 #define CMD_TREE command_tree
 //----------------------------------------------------------------
 // constructors
-CMD_TREE::command_tree(command_node* root)
+CMD_TREE::command_tree(
+        command_node* root)
 {
     // init fields
     this->root = root;
@@ -265,18 +322,20 @@ CMD_TREE::command_tree()
 }
 //----------------------------------------------------------------
 // TREE OPERTATIONS
-int CMD_TREE::get_size()
+int CMD_TREE::get_size() const
 {
     return get_size(this->root);
 }
-int CMD_TREE::get_size(command_node* root)
+int CMD_TREE::get_size(
+        command_node* root) const
 {
     if (!root) return 0;
     return 
         1 + get_size(root->left) + get_size(root->right);
 }
 
-void CMD_TREE::inOrderTrav(command_node* root)
+void CMD_TREE::inOrderTrav(
+            command_node* root) const
 {
     if (!root) { return; }
     inOrderTrav(root->left);
@@ -284,9 +343,146 @@ void CMD_TREE::inOrderTrav(command_node* root)
     inOrderTrav(root->right);
 }
 
-void CMD_TREE::printTree()
+void CMD_TREE::printTree() const
 {
     inOrderTrav(this->root);
+}
+
+/** executes all commands */
+int CMD_TREE::execute_commands() const 
+{
+    return inOrder_execution(this->root);
+} 
+
+/** does in order traversal to execute each node returns 0 if success -1 if failure */
+int CMD_TREE::inOrder_execution(
+        command_node* node) const
+{
+    /** reached past leaf or no commands to run */
+    if (!node) return 0;
+
+    /** execute left subtree */
+    int left_tree_response = inOrder_execution(node->left);
+    /** check current node for operator type  || & ; */
+    /** convert command data to char* for strcmp  */
+    const char* data = node->data.data();
+
+    /** AND operator requires preceding command to finish successfully before running next cmd */
+    if (std::strcmp(data, "&") == 0)
+    {
+        if (left_tree_response != 0){
+            /** unable to run command */
+            std::cout << "[ERROR] previous command failed, cannot running command -> " << data << std::endl;
+            return -1;
+        }
+    }
+    /** check if node is a leaf then execute */
+    int current_node_response = -1;
+    if (!node->left && !node->right)
+    {
+        current_node_response = execute_node(node);
+        return current_node_response;
+    }
+    /** execute right subtree */
+    int right_tree_response = inOrder_execution(node->right);
+
+    return 0;
+}
+
+/** runs a single command */
+int CMD_TREE::execute_node(
+    command_node* node) const
+{
+    if (!node) {
+        std::cout << "No node given" << std::endl;
+        return 0;
+    }
+    /** check if command exists */
+    const char* data = node->data.data();
+    /** TASK: perform exec call with node data and args */
+    if (node->data.find("cd ") != std::string::npos){
+        std::vector<std::string> args = shell::tokenize(node->data, ' ');
+        //for (std::string& s: args) printf("token: %s\n", s.c_str());
+        /** change directory */
+        if (args.size() > 1){
+            const char* c = args[1].c_str();
+            if (chdir(c) != 0)
+            {
+                return 1;
+            }
+        }else{
+            return 1;
+        }
+        
+    }else {
+        /** check if command lives on system PATH */
+        std::string path;
+        bool exists = is_built_in(node->data, path);
+        if (!exists){
+            printf("Command '%s' isnt recognized", node->data.c_str());
+            return -1;
+        }
+        /** TASK: make exec call */
+        int r = node_exec(node->data);
+    }
+
+
+    return 0;
+}
+
+ /**  coverts command to a char*[] */
+std::vector<char*> CMD_TREE::to_char_ptr_array(
+    std::string str) const
+{
+    /** retokenize the cmd */
+    std::vector<std::string> tokens = shell::tokenize(str, ' ');
+    /** creates char*[] */
+    std::vector<char*> args;
+
+    /** allocate memory and copy strings to ensure they persist */
+    for (const auto& s : tokens) {
+        char* arg = new char[s.length() + 1];
+        std::strcpy(arg, s.c_str());
+        args.push_back(arg);
+    }
+    args.push_back(nullptr);
+
+    return args;
+}
+
+/** converts cmd string to char*[], fork() process and runs execpv in child proccess  */
+int  CMD_TREE::node_exec(
+    std::string command) const
+{
+    /** convert cmd to char*[] */
+    std::vector<char*> args = to_char_ptr_array(command);
+    /** create child process */
+    pid_t pid = fork();
+    /** in child process */
+    if (pid == 0)
+    {
+        execvp(args[0], args.data());
+        perror("execvp failed");
+        // Clean up allocated memory before exit
+        for (char* arg : args) {
+            if (arg) delete[] arg;
+        }
+        _exit(1);
+    }else if (pid > 0){
+        /** wait for child to be done */
+        waitpid(pid, nullptr, 0);
+        // Clean up allocated memory in parent
+        for (char* arg : args) {
+            if (arg) delete[] arg;
+        }
+    }else{
+        // Clean up allocated memory on fork failure
+        for (char* arg : args) {
+            if (arg) delete[] arg;
+        }
+        perror("Error when forking proccess");
+    }
+    return 0;
 }
 
 /** constructs a balanced tree of nodes */
@@ -315,7 +511,8 @@ command_node* CMD_TREE::to_balanced_tree(
 }
 
 /** turns tokens into nodes and sets the root as a balanced tree */
-void CMD_TREE:: make_tree(std::vector<std::string> commands)
+void CMD_TREE:: make_tree(
+    const std::vector<std::string>& commands)
 {
     size_t n = commands.size();
     if (n==0) return;
@@ -323,7 +520,7 @@ void CMD_TREE:: make_tree(std::vector<std::string> commands)
     std::vector<command_node*> nodes;
     nodes.reserve(n);
     // creates nodes
-    for (std::string& s : commands)
+    for (std::string s : commands)
     {
         /** creates node ptr */
         command_node* cmd = new command_node;
@@ -342,46 +539,68 @@ void CMD_TREE:: make_tree(std::vector<std::string> commands)
         this->root = to_balanced_tree(nodes, 0, num_nodes - 1);
     }
 
-    /** print tree */
-    printTree();
-    /** DELETE: test is build in  */
-    is_built_in("ls");
 }
 
 /** checks if a command is in users $PATH or not and if not check local for exe */
 bool CMD_TREE::is_built_in(
-    std::string exe)
+    std::string exe,
+    std::string& path
+) const
 {
-    char* path;
-    /** check path for MAC */
-    #ifdef __APPLE__
-        path = std::getenv("PATH");
-    /** check path for LINUX */
-    #elif defined(__linux__) || defined(__unix__)
-        path = std::getenv("Path");
-    /** check path for WINDOWS */
-    #elif defined(_WIN32)
-        path = std::getenv("Path");
-    #else
-        path = std::getenv("PATH");
-    #endif
+    // Trim whitespace and extract just the executable name (first token)
+    // Remove leading/trailing whitespace
+    size_t trim_start = exe.find_first_not_of(" \t\n\r");
+    if (trim_start == std::string::npos) { return false; }
+    size_t trim_end = exe.find_last_not_of(" \t\n\r");
+    exe = exe.substr(trim_start, trim_end - trim_start + 1);
+    
+    // Extract just the first word (executable name) if there are arguments
+    size_t space_pos = exe.find_first_of(" \t\n\r");
+    if (space_pos != std::string::npos) {
+        exe = exe.substr(0, space_pos);
+    }
+    
+    /** gets system $PATH */
+    std::string path_string = get_path();
 
-    /** check path for exe match */
-    char* ptr = path;
-    while(*ptr != '\0'){
-        /** TASK: tokenize $PATH */
-        printf("%c", *ptr);
-        ptr++;
+    if (path_string.empty()) { return false; }
+
+    /** tokenize by ":" delimeter */
+    /** two ptr algo to tokenize the string */
+    std::vector<std::string> path_tokens;
+    int end = 0, start = 0, n = path_string.size();
+
+    /** splits the path string by ':' */
+    while (end < n)
+    {
+        if (end == n || path_string[end] == ':')
+        {
+            std::string sub = path_string.substr(start, (end-start));
+            path_tokens.push_back(sub);
+            start = end+1;
+        }
+        end++;
     }
 
-    /** TASK: see if theres a match */
-
-
+    /** check each path to see if exe exists */
+    for(std::string& s : path_tokens)
+    {
+        /** construct absolute path */
+        std::string exe_path = s + '/' + exe;
+        bool found = exe_exists(exe_path);
+        if (found)
+        {
+            path = exe_path;
+            return true;
+        }
+    }
+    //std::cout << "[ERROR] COMMAND NOT FOUND" << std::endl;
     return false;
 }
-// ------------------ TESTING ---------------------------------
+// -------------------------- TESTING ---------------------------------
 
-command_node* get_test_cmd_nodes(){
+command_node* get_test_cmd_nodes()
+{
     // create root node
     command_node* root = new command_node;
     root->data = "echo";
@@ -396,4 +615,52 @@ command_node* get_test_cmd_nodes(){
     root->right = node2;
 
     return root;
+}
+
+// -------------------------- TESTING ---------------------------------
+
+/** GLOBAL METHODS */
+
+/** gets the system $PATH and to_string() it */
+std::string get_path()
+{
+    char* path;
+    /** check path for MAC */
+    #ifdef __APPLE__
+        path = std::getenv("PATH");
+    /** check path for LINUX */
+    #elif defined(__linux__) || defined(__unix__)
+        path = std::getenv("PATH");
+    /** check path for WINDOWS */
+    #elif defined(_WIN32)
+        path = std::getenv("Path");
+    #else
+        path = std::getenv("PATH");
+    #endif
+
+    /** check path for exe match */
+    std::string path_string = "";
+    if (path){
+        std::string path_string(path);
+        return path_string;
+    }else{
+        return "";
+    }
+}
+
+/** checks if a executable exists via $PATH token path exe) /bin/ls = true; */
+/**
+* NOTE: we use std::ifstream because system executables 
+*       only allow read access permission so std::fstream
+*       wont work
+*/ 
+bool exe_exists(
+    const std::string& path)
+{
+    if (path.empty()) { return false; }
+    /** creates input stream file object */
+    std::ifstream f;
+    f.open(path, std::ios::binary);
+    /** if it exists it will be opened */
+    return f.is_open();
 }

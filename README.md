@@ -6,11 +6,6 @@ The shell exposes system context such as username, hostname, and current working
 ======================================================
             NEXT TASK 
 ======================================================
-- Implement -> bool is_built_in(std::string exe); 
-    - gets PATH
-    - tokenizes PATH
-    - checks for match with exe
-- Implement -> int execute_commands();  
-    - recursive function does inOrderTrav but returns int
-        - SUCCESS=0 FAIL=!0
-    - return code can dictate if the next node will get executed or not
+
+- Implement cd command 
+- Implement running local scripts
